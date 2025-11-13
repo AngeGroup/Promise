@@ -1,0 +1,19 @@
+{
+    "name": "angegroup/promise",
+    "description": "Promise is an API developed by AngeGroup. This API enable to use custom command system.",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "promise\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Dumont-Julien",
+            "email": "dumontj357@icloud.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {}
+}
