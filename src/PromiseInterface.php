@@ -31,11 +31,6 @@ interface PromiseInterface {
 	 *      than once.
 	 *
 	 * @template-covariant ClosureResult
-	 *
-	 * @phpstan-param null|callable(PromiseResult): ClosureResult $onFulfilled
-	 * @phpstan-param null|callable(PromiseError): mixed $onRejected
-	 *
-	 * @phpstan-return PromiseInterface<ClosureResult, PromiseError>
 	 */
 	public function then(?callable $onFulfilled = null, ?callable $onRejected = null): PromiseInterface;
 
@@ -48,9 +43,6 @@ interface PromiseInterface {
 	 *
 	 * Additionally, you can type hint the `$reason` argument of `$onRejected` to catch
 	 * only specific errors.
-	 *
-	 * @phpstan-param callable(PromiseError) : mixed $onRejected
-	 * @phpstan-return PromiseInterface<PromiseResult, PromiseError>
 	 */
 	public function catch(callable $onRejected): PromiseInterface;
 
@@ -95,9 +87,6 @@ interface PromiseInterface {
 	 *     ->catch('handleError')
 	 *     ->finally('cleanup');
 	 * ```
-	 *
-	 * @phpstan-param callable() : mixed $onFulfilledOrRejected
-	 * @phpstan-return PromiseInterface<PromiseResult, PromiseError>
 	 */
 	public function finally(callable $onFulfilledOrRejected): PromiseInterface;
 
