@@ -16,7 +16,7 @@ final class FulfilledPromise implements PromiseInterface {
 
 	public function __construct($value = null) {
 		if($value instanceof PromiseInterface) {
-			throw new InvalidArgumentException("You cannot create centurion\\utils\\promise\\internal\\FulfilledPromise with a promise. Use centurion\\utils\\promise\\resolve(\$promiseOrValue) instead.");
+			throw new InvalidArgumentException("You cannot create promise\\internal\\FulfilledPromise with a promise. Use promise\\resolve(\$promiseOrValue) instead.");
 		}
 		$this->value = $value;
 	}
@@ -50,21 +50,6 @@ final class FulfilledPromise implements PromiseInterface {
 
 	public function cancel(): void {}
 
-	/**
-	 * @deprecated 3.0.0 Use `catch()` instead
-	 * @see self::catch()
-	 */
-	public function otherwise(callable $onRejected): PromiseInterface {
-		return $this->catch($onRejected);
-	}
-
-	/**
-	 * @deprecated 3.0.0 Use `finally()` instead
-	 * @see self::finally()
-	 */
-	public function always(callable $onFulfilledOrRejected): PromiseInterface {
-		return $this->finally($onFulfilledOrRejected);
-	}
 
 	public function wait(): void {
 		// NOOP

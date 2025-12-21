@@ -100,36 +100,6 @@ interface PromiseInterface {
 	public function cancel(): void;
 
 	/**
-	 * [Deprecated] Registers a rejection handler for a promise.
-	 *
-	 * This method continues to exist only for BC reasons and to ease upgrading
-	 * between versions. It is an alias for:
-	 *
-	 * ```php
-	 * $promise->catch($onRejected);
-	 * ```
-	 *
-	 * @deprecated 3.0.0 Use catch() instead
-	 * @see self::catch()
-	 */
-	public function otherwise(callable $onRejected): PromiseInterface;
-
-	/**
-	 * [Deprecated] Allows you to execute "cleanup" type tasks in a promise chain.
-	 *
-	 * This method continues to exist only for BC reasons and to ease upgrading
-	 * between versions. It is an alias for:
-	 *
-	 * ```php
-	 * $promise->finally($onFulfilledOrRejected);
-	 * ```
-	 *
-	 * @deprecated 3.0.0 Use finally() instead
-	 * @see self::finally()
-	 */
-	public function always(callable $onFulfilledOrRejected): PromiseInterface;
-
-	/**
 	 * Waits for the promise to be fulfilled or rejected.
 	 * Use this method only if you know what you are doing, it can cause deadlocks.
 	 *

@@ -116,21 +116,6 @@ final class Promise implements PromiseInterface {
 		}
 	}
 
-	/**
-	 * @deprecated 3.0.0 Use `catch()` instead
-	 * @see self::catch()
-	 */
-	public function otherwise(callable $onRejected): PromiseInterface {
-		return $this->catch($onRejected);
-	}
-
-	/**
-	 * @deprecated 3.0.0 Use `finally()` instead
-	 * @see self::finally()
-	 */
-	public function always(callable $onFulfilledOrRejected): PromiseInterface {
-		return $this->finally($onFulfilledOrRejected);
-	}
 
 	/**
 	 * @deprecated
