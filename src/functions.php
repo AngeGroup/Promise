@@ -1,20 +1,22 @@
 <?php
+
 declare(strict_types=1);
 
 namespace promise;
 
-use promise\exception\CompositeException;
-use promise\internal\FulfilledPromise;
-use promise\internal\RejectedPromise;
 use Closure;
-
 use function gettype;
 use function is_array;
 use function is_object;
-
 use LogicException;
 
 use function method_exists;
+use promise\exception\CompositeException;
+use promise\exception\LengthException;
+
+use promise\internal\FulfilledPromise;
+
+use promise\internal\RejectedPromise;
 
 use ReflectionClass;
 use ReflectionException;
@@ -29,10 +31,10 @@ function resolve(mixed $promiseOrValue): PromiseInterface {
 	if($promiseOrValue instanceof PromiseInterface) {
 		return $promiseOrValue;
 	}
-	if(is_object($promiseOrValue) && method_exists($promiseOrValue, "then")) {
+	if(is_object($promiseOrValue) && method_exists($promiseOrValue, 'then')) {
 		$canceller = null;
-		if(method_exists($promiseOrValue, "cancel")) {
-			$canceller = [$promiseOrValue, "cancel"];
+		if(method_exists($promiseOrValue, 'cancel')) {
+			$canceller = [$promiseOrValue, 'cancel'];
 		}
 		return new Promise(function($resolve, $reject) use ($promiseOrValue): void {
 			$promiseOrValue->then($resolve, $reject);
@@ -45,6 +47,9 @@ function reject(Throwable $reason): PromiseInterface {
 	return new RejectedPromise($reason);
 }
 
+/**
+ * @param iterable<mixed> $promisesOrValues
+ */
 function all(iterable $promisesOrValues): PromiseInterface {
 	$cancellationQueue = new internal\CancellationQueue();
 
@@ -62,7 +67,7 @@ function all(iterable $promisesOrValues): PromiseInterface {
 				function($value) use ($i, &$values, &$toResolve, &$continue, $resolve): void {
 					$values[$i] = $value;
 
-					if (0 === --$toResolve && ! $continue) {
+					if (0 === --$toResolve && !$continue) {
 						$resolve($values);
 					}
 				},
@@ -72,7 +77,7 @@ function all(iterable $promisesOrValues): PromiseInterface {
 				}
 			);
 
-			if ( ! $continue) {
+			if ( !$continue) {
 				break;
 			}
 		}
@@ -90,6 +95,8 @@ function all(iterable $promisesOrValues): PromiseInterface {
  *
  * The returned promise will become **infinitely pending** if  `$promisesOrValues`
  * contains 0 items.
+ *
+ * @param iterable<mixed> $promisesOrValues
  */
 function race(iterable $promisesOrValues): PromiseInterface {
 	$cancellationQueue = new internal\CancellationQueue();
@@ -104,7 +111,7 @@ function race(iterable $promisesOrValues): PromiseInterface {
 				$continue = false;
 			});
 
-			if ( ! $continue) {
+			if ( !$continue) {
 				break;
 			}
 		}
@@ -117,10 +124,13 @@ function race(iterable $promisesOrValues): PromiseInterface {
  * will be the resolution value of the triggering item.
  *
  * The returned promise will only reject if *all* items in `$promisesOrValues` are
- * rejected. The rejection value will be an array of all rejection reasons.
+ * rejected. The rejection value will be a `CompositeException` whose throwables
+ * carry every individual rejection reason.
  *
- * The returned promise will also reject with a `Plutonium\Promise\Exception\LengthException`
+ * The returned promise will reject with a `promise\exception\LengthException`
  * if `$promisesOrValues` contains 0 items.
+ *
+ * @param iterable<mixed> $promisesOrValues
  */
 function any(iterable $promisesOrValues): PromiseInterface {
 	$cancellationQueue = new internal\CancellationQueue();
@@ -142,7 +152,7 @@ function any(iterable $promisesOrValues): PromiseInterface {
 				function(Throwable $reason) use ($i, &$reasons, &$toReject, $reject, &$continue): void {
 					$reasons[$i] = $reason;
 
-					if (0 === --$toReject && ! $continue) {
+					if (0 === --$toReject && !$continue) {
 						$reject(new CompositeException(
 							$reasons,
 							'All promises rejected.'
@@ -151,14 +161,14 @@ function any(iterable $promisesOrValues): PromiseInterface {
 				}
 			);
 
-			if ( ! $continue) {
+			if ( !$continue) {
 				break;
 			}
 		}
 
 		$continue = false;
-		if ($toReject === 0 && ! $reasons) {
-			$reject(new Exception\LengthException(
+		if ($toReject === 0 && !$reasons) {
+			$reject(new LengthException(
 				'Must contain at least 1 item but contains only 0 items.'
 			));
 		} elseif ($toReject === 0) {
@@ -171,21 +181,70 @@ function any(iterable $promisesOrValues): PromiseInterface {
 }
 
 /**
+ * Returns a promise that resolves once every input has settled (fulfilled or
+ * rejected). The resolution value is an array of result entries in input order:
+ *
+ *   - `['status' => 'fulfilled', 'value' => mixed]`
+ *   - `['status' => 'rejected', 'reason' => Throwable]`
+ *
+ * Unlike {@see all()}, `allSettled()` never short-circuits on rejection.
+ * Resolves with `[]` when given an empty iterable.
+ *
+ * @param iterable<mixed> $promisesOrValues
+ */
+function allSettled(iterable $promisesOrValues): PromiseInterface {
+	$cancellationQueue = new internal\CancellationQueue();
+
+	return new Promise(function($resolve) use ($promisesOrValues, $cancellationQueue): void {
+		$toSettle = 0;
+		$continue = true;
+		$results = [];
+
+		foreach ($promisesOrValues as $i => $promiseOrValue) {
+			$cancellationQueue->enqueue($promiseOrValue);
+			$results[$i] = null;
+			$toSettle++;
+
+			resolve($promiseOrValue)->then(
+				function($value) use ($i, &$results, &$toSettle, &$continue, $resolve): void {
+					$results[$i] = ['status' => 'fulfilled', 'value' => $value];
+					if (0 === --$toSettle && !$continue) {
+						$resolve($results);
+					}
+				},
+				function(Throwable $reason) use ($i, &$results, &$toSettle, &$continue, $resolve): void {
+					$results[$i] = ['status' => 'rejected', 'reason' => $reason];
+					if (0 === --$toSettle && !$continue) {
+						$resolve($results);
+					}
+				}
+			);
+		}
+
+		$continue = false;
+		if ($toSettle === 0) {
+			$resolve($results);
+		}
+	}, $cancellationQueue);
+}
+
+/**
  * @throws ReflectionException
  * @internal
  */
 function _checkTypehint(callable $callback, Throwable $reason): bool {
 	if (is_array($callback)) {
 		$callbackReflection = new ReflectionMethod($callback[0], $callback[1]);
-	} elseif (is_object($callback) && ! $callback instanceof Closure) {
+	} elseif (is_object($callback) && !$callback instanceof Closure) {
 		$callbackReflection = new ReflectionMethod($callback, '__invoke');
 	} else {
+		/** @var Closure|string $callback */
 		$callbackReflection = new ReflectionFunction($callback);
 	}
 
 	$parameters = $callbackReflection->getParameters();
 
-	if ( ! isset($parameters[0])) {
+	if ( !isset($parameters[0])) {
 		return true;
 	}
 
@@ -219,15 +278,19 @@ function _checkTypehint(callable $callback, Throwable $reason): bool {
 	}
 
 	foreach ($types as $type) {
+		$matches = false;
 
 		if ($type instanceof ReflectionIntersectionType) {
 			foreach ($type->getTypes() as $typeToMatch) {
-				if ( ! ($matches = ($typeToMatch->isBuiltin() && gettype($reason) === $typeToMatch->getName())
-					|| (new ReflectionClass($typeToMatch->getName()))->isInstance($reason))) {
+				assert($typeToMatch instanceof ReflectionNamedType);
+				$matches = ($typeToMatch->isBuiltin() && gettype($reason) === $typeToMatch->getName())
+					|| (new ReflectionClass($typeToMatch->getName()))->isInstance($reason);
+				if ( !$matches) {
 					break;
 				}
 			}
 		} else {
+			assert($type instanceof ReflectionNamedType);
 			$matches = ($type->isBuiltin() && gettype($reason) === $type->getName())
 				|| (new ReflectionClass($type->getName()))->isInstance($reason);
 		}
@@ -239,7 +302,7 @@ function _checkTypehint(callable $callback, Throwable $reason): bool {
 				return true;
 			}
 		} else {
-			if ( ! $isTypeUnion) {
+			if ( !$isTypeUnion) {
 				return false;
 			}
 		}
@@ -247,5 +310,5 @@ function _checkTypehint(callable $callback, Throwable $reason): bool {
 
 	// If we look for a single match (union) and did not return early, we matched no type and are false
 	// If we look for a full match (intersection) and did not return early, we matched all types and are true
-	return ! $isTypeUnion;
+	return !$isTypeUnion;
 }

@@ -1,19 +1,43 @@
 {
     "name": "angegroup/promise",
-    "description": "Promise is an API developed by AngeGroup. This API enable to use custom command system.",
+    "description": "Promise is an API developed by AngeGroup. A Promise/A+ inspired implementation in PHP with cancellation support.",
     "type": "library",
     "license": "MIT",
-    "autoload": {
-        "psr-4": {
-            "promise\\": "src/"
-        }
-    },
+    "keywords": ["promise", "promises", "promises-a-plus", "async", "deferred"],
     "authors": [
         {
             "name": "Dumont-Julien",
             "email": "dumontj357@icloud.com"
         }
     ],
+    "require": {
+        "php": ">=8.2"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^1.12",
+        "friendsofphp/php-cs-fixer": "^3.64",
+        "phpunit/phpunit": "^11.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "promise\\": "src/"
+        },
+        "files": [
+            "src/functions.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "promise\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "phpstan": "phpstan analyse --memory-limit=512M",
+        "cs-check": "php-cs-fixer fix --dry-run --diff",
+        "cs-fix": "php-cs-fixer fix",
+        "test": "phpunit",
+        "test-coverage": "phpunit --coverage-text"
+    },
     "minimum-stability": "dev",
-    "require": {}
+    "prefer-stable": true
 }

@@ -35,6 +35,7 @@ Documentation/*
 
 # PHPUnit
 /.phpunit.result.cache
+/.phpunit.cache/
 
 # php-cs-fixer
 /.php_cs.cache

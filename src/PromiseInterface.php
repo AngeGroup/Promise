@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace promise;
@@ -29,8 +30,6 @@ interface PromiseInterface {
 	 *      never both.
 	 *  2. `$onFulfilled` and `$onRejected` will never be called more
 	 *      than once.
-	 *
-	 * @template-covariant ClosureResult
 	 */
 	public function then(?callable $onFulfilled = null, ?callable $onRejected = null): PromiseInterface;
 
@@ -101,7 +100,10 @@ interface PromiseInterface {
 
 	/**
 	 * Waits for the promise to be fulfilled or rejected.
-	 * Use this method only if you know what you are doing, it can cause deadlocks.
+	 *
+	 * No-op without an underlying event loop. Implementations may throw
+	 * {@see TimeoutException} when an event loop is provided. Use only when
+	 * you know what you are doing — it can cause deadlocks.
 	 *
 	 * @throws TimeoutException
 	 */

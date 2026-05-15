@@ -1,0 +1,23 @@
+name: Setup
+description: Setup PHP 8.2 and install composer dependencies (with cache)
+
+runs:
+  using: composite
+  steps:
+    - name: Setup PHP 8.2
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        tools: composer:v2
+        coverage: none
+
+    - name: Cache composer dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.composer/cache
+        key: composer-${{ hashFiles('composer.lock', 'composer.json') }}
+        restore-keys: composer-
+
+    - name: Install dependencies
+      shell: bash
+      run: composer install --no-interaction --no-progress --prefer-dist

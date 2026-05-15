@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [stable, main]
+  pull_request:
+
+jobs:
+  validate:
+    name: Validate composer.json
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+          coverage: none
+      - run: composer validate --strict --no-check-publish
+
+  lint:
+    name: PHP syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+      - run: find src tests -name '*.php' -print0 | xargs -0 -n1 -P4 php -l
+
+  cs-fixer:
+    name: php-cs-fixer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: vendor/bin/php-cs-fixer fix --dry-run --diff --no-interaction
+
+  phpstan:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: vendor/bin/phpstan analyse --no-progress --memory-limit=512M
+
+  phpunit:
+    name: PHPUnit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - run: vendor/bin/phpunit --colors=always

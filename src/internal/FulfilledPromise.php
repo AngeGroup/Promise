@@ -1,27 +1,27 @@
 <?php
+
 declare(strict_types=1);
 
 namespace promise\internal;
 
+use InvalidArgumentException;
+
 use promise\PromiseInterface;
 
 use function promise\resolve;
-
-use InvalidArgumentException;
 use Throwable;
 
 final class FulfilledPromise implements PromiseInterface {
-	/** @var mixed|null */
 	private mixed $value;
 
-	public function __construct($value = null) {
+	public function __construct(mixed $value = null) {
 		if($value instanceof PromiseInterface) {
-			throw new InvalidArgumentException("You cannot create promise\\internal\\FulfilledPromise with a promise. Use promise\\resolve(\$promiseOrValue) instead.");
+			throw new InvalidArgumentException('You cannot create promise\\internal\\FulfilledPromise with a promise. Use promise\\resolve($promiseOrValue) instead.');
 		}
 		$this->value = $value;
 	}
 
-	public function then(callable $onFulfilled = null, callable $onRejected = null): PromiseInterface {
+	public function then(?callable $onFulfilled = null, ?callable $onRejected = null): PromiseInterface {
 		if (null === $onFulfilled) {
 			return $this;
 		}
@@ -49,7 +49,6 @@ final class FulfilledPromise implements PromiseInterface {
 	}
 
 	public function cancel(): void {}
-
 
 	public function wait(): void {
 		// NOOP

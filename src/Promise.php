@@ -1,24 +1,26 @@
 <?php
+
 declare(strict_types=1);
 
 namespace promise;
 
-use promise\internal\RejectedPromise;
 use Closure;
-
 use function is_array;
-use function is_object;
 
+use function is_object;
 use LogicException;
+
+use promise\internal\RejectedPromise;
 use ReflectionException;
 use ReflectionFunction;
 use ReflectionMethod;
 use Throwable;
 
 final class Promise implements PromiseInterface {
-	/** @var callable */
+	/** @var callable|null */
 	private $canceller;
-	private $result;
+	private ?PromiseInterface $result = null;
+	/** @var list<callable> */
 	private array $handlers = [];
 	private int $requiredCancelRequests = 0;
 
@@ -27,7 +29,7 @@ final class Promise implements PromiseInterface {
 	 */
 	public function __construct(
 		callable $resolver,
-		callable $canceller = null
+		?callable $canceller = null
 	) {
 		$this->canceller = $canceller;
 		$cb = $resolver;
@@ -38,7 +40,7 @@ final class Promise implements PromiseInterface {
 	/**
 	 * @throws ReflectionException
 	 */
-	public function then(callable $onFulfilled = null, callable $onRejected = null): PromiseInterface {
+	public function then(?callable $onFulfilled = null, ?callable $onRejected = null): PromiseInterface {
 		if(null !== $this->result) {
 			return $this->result->then($onFulfilled, $onRejected);
 		}
@@ -51,6 +53,9 @@ final class Promise implements PromiseInterface {
 		return new Promise(
 			$this->resolver($onFulfilled, $onRejected),
 			static function() use (&$parent) {
+				if($parent === null) {
+					return;
+				}
 				$parent->requiredCancelRequests--;
 				if($parent->requiredCancelRequests <= 0) {
 					$parent->cancel();
@@ -62,7 +67,7 @@ final class Promise implements PromiseInterface {
 
 	public function catch(callable $onRejected): PromiseInterface {
 		return $this->then(null, static function($reason) use ($onRejected) {
-			if ( ! _checkTypehint($onRejected, $reason)) {
+			if ( !_checkTypehint($onRejected, $reason)) {
 				return new RejectedPromise($reason);
 			}
 
@@ -95,7 +100,7 @@ final class Promise implements PromiseInterface {
 
 			// Return if the root promise is already resolved or a
 			// FulfilledPromise or RejectedPromise
-			if ( ! $root instanceof self || null !== $root->result) {
+			if ( !$root instanceof self || null !== $root->result) {
 				return;
 			}
 
@@ -116,9 +121,8 @@ final class Promise implements PromiseInterface {
 		}
 	}
 
-
 	/**
-	 * @deprecated
+	 * @deprecated No-op without an underlying event loop. Kept for interface compatibility.
 	 */
 	public function wait(): void {}
 
@@ -126,7 +130,7 @@ final class Promise implements PromiseInterface {
 		return $this->result !== null;
 	}
 
-	private function resolver(callable $onFulfilled = null, callable $onRejected = null): callable {
+	private function resolver(?callable $onFulfilled = null, ?callable $onRejected = null): callable {
 		return function($resolve, $reject) use ($onFulfilled, $onRejected) {
 			$this->handlers[] = static function(PromiseInterface $promise) use ($onFulfilled, $onRejected, $resolve, $reject) {
 				$promise = $promise->then($onFulfilled, $onRejected);
@@ -176,7 +180,7 @@ final class Promise implements PromiseInterface {
 		}
 	}
 
-	private function unwrap($promise): PromiseInterface {
+	private function unwrap(PromiseInterface $promise): PromiseInterface {
 		while ($promise instanceof self && null !== $promise->result) {
 			$promise = $promise->result;
 		}
@@ -200,9 +204,10 @@ final class Promise implements PromiseInterface {
 		// if the callback creates an Exception (creating garbage cycles).
 		if (is_array($callback)) {
 			$ref = new ReflectionMethod($callback[0], $callback[1]);
-		} elseif (is_object($callback) && ! $callback instanceof Closure) {
+		} elseif (is_object($callback) && !$callback instanceof Closure) {
 			$ref = new ReflectionMethod($callback, '__invoke');
 		} else {
+			/** @var Closure|string $callback */
 			$ref = new ReflectionFunction($callback);
 		}
 		$args = $ref->getNumberOfParameters();

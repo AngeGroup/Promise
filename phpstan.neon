@@ -1,0 +1,26 @@
+parameters:
+    level: 8
+    paths:
+        - src
+    treatPhpDocTypesAsCertain: false
+
+    ignoreErrors:
+        # `$continue` is captured by reference and mutated by sibling closures.
+        # PHPStan analyses each closure scope independently and cannot see the
+        # cross-closure mutation, so it concludes the flag is always true.
+        - identifier: booleanNot.alwaysFalse
+          path: src/functions.php
+        - identifier: booleanAnd.alwaysFalse
+          path: src/functions.php
+
+        # `_checkTypehint()` resolves `ReflectionType` to `ReflectionNamedType`
+        # via assert() inside the loop. The reflected name string is a valid
+        # class-string at runtime — PHPStan can't infer that statically.
+        - message: '#class ReflectionClass constructor expects class-string#'
+          path: src/functions.php
+
+        # Promise::call() invokes the user-supplied resolver. The parameter
+        # type is `callable`, but PHPStan cannot prove a `string` callable
+        # actually points to an existing function.
+        - message: '#Trying to invoke .+ but it might not be a callable\.#'
+          path: src/Promise.php
